@@ -56,7 +56,7 @@ await test('host: 工具 schema + 校验 + init/status/list/clear 全链路', as
   const st = await host.bookwriterProjectTool.execute({ action: 'status', index: 1, status: 'done', summary: '完成' })
   assert.ok(st.summary.includes('done'))
   const list = await host.bookwriterProjectTool.execute({ action: 'list' })
-  assert.ok(list.data.includes('1/3'))
+  assert.ok(list.summary.includes('1/3'))
   const noConfirm = await host.bookwriterProjectTool.execute({ action: 'clear' })
   assert.equal(noConfirm.ok, false)
 })
