@@ -1,0 +1,306 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Article Outline",
+  "description": "罗振宇风格认知/启发/商业长文大纲数据结构，用于定义长文的整体结构和段落安排",
+  "type": "object",
+  "required": ["article_title", "article_type", "scqa_pattern", "author", "sections"],
+  "properties": {
+    "article_title": {
+      "type": "string",
+      "description": "长文标题（必为金句或对仗句）"
+    },
+    "article_subtitle": {
+      "type": "string",
+      "description": "副标题（必为金句或启发句）"
+    },
+    "article_type": {
+      "type": "string",
+      "enum": ["罗胖60秒", "罗辑思维长文", "跨年演讲稿"],
+      "enumDescriptions": [
+        "罗胖60秒：1 段，60-150 字，克制即结构，最难",
+        "罗辑思维长文：1 引子 + 3-5 主体 + 1 收束，2000-4000 字，公众号长文",
+        "跨年演讲稿：开场 + 3-5 故事章节 + 收束，8000-15000 字，时间的朋友 / 文明之旅"
+      ],
+      "description": "长文结构类型"
+    },
+    "scqa_pattern": {
+      "type": "string",
+      "enum": ["TQA", "CAA", "PEI", "无"],
+      "enumDescriptions": [
+        "TQA 触发式：触发-问题-答案，罗辑思维长文/跨年演讲稿默认",
+        "CAA 行动式：具体-抽象-行动，罗辑思维长文备选",
+        "PEI 启发式：现象-解释-启发，罗胖60秒默认",
+        "无：纯故事、纯复盘等无显式 SCQA 的情况"
+      ],
+      "description": "SCQA 逻辑势能变体（罗振宇风格）"
+    },
+    "author": {
+      "type": "string",
+      "default": "罗振宇",
+      "description": "创作者（默认罗振宇）"
+    },
+    "source_column": {
+      "type": "string",
+      "enum": ["罗辑思维", "得到 App", "罗胖60秒", "时间的朋友", "文明之旅", "启发", "阅读的方法", "成大事者不纠结"],
+      "description": "出处栏目"
+    },
+    "publish_date": {
+      "type": "string",
+      "format": "date",
+      "description": "发布日期，格式：YYYY-MM-DD"
+    },
+    "target_reader": {
+      "type": "string",
+      "enum": ["大众读者", "终身学习者", "创业者", "商业读者"],
+      "description": "目标读者"
+    },
+    "core_insight": {
+      "type": "string",
+      "description": "核心洞察（启发），一句话说清这篇想讲什么"
+    },
+    "core_xinfa": {
+      "type": "array",
+      "minItems": 1,
+      "description": "必含心法清单（来自 12 大心法）",
+      "items": {
+        "type": "string",
+        "enum": ["躬身入局", "长期主义", "启发式输出", "一具体就深刻", "一行动就创新", "一困惑就出门", "故事细节", "金句主义", "打比方", "举例降认知", "动词驱动", "谦卑自嘲"]
+      }
+    },
+    "scqa_nodes": {
+      "type": "array",
+      "description": "SCQA 节点显式标注",
+      "items": {
+        "type": "object",
+        "required": ["node", "section_id", "content"],
+        "properties": {
+          "node": {
+            "type": "string",
+            "description": "SCQA 节点类型（TQA=CAA=PEI 的具体字母）"
+          },
+          "section_id": {
+            "type": "string",
+            "description": "所在段落编号"
+          },
+          "content": {
+            "type": "string",
+            "description": "该节点的内容"
+          }
+        }
+      }
+    },
+    "xinfa_hits": {
+      "type": "array",
+      "description": "心法命中点显式标注（哪一段用哪个心法）",
+      "items": {
+        "type": "object",
+        "required": ["xinfa", "section_id"],
+        "properties": {
+          "xinfa": {
+            "type": "string",
+            "enum": ["躬身入局", "长期主义", "启发式输出", "一具体就深刻", "一行动就创新", "一困惑就出门", "故事细节", "金句主义", "打比方", "举例降认知", "动词驱动", "谦卑自嘲"]
+          },
+          "section_id": {
+            "type": "string",
+            "description": "所在段落编号"
+          }
+        }
+      }
+    },
+    "story_details_planned": {
+      "type": "array",
+      "description": "故事细节占位（必含具体时间/地点/数字）",
+      "items": {
+        "type": "object",
+        "required": ["section_id", "time", "place", "figure", "number"],
+        "properties": {
+          "section_id": {
+            "type": "string",
+            "description": "所在段落编号"
+          },
+          "time": {
+            "type": "string",
+            "description": "具体时间（如 2024-07-30、十年前）"
+          },
+          "place": {
+            "type": "string",
+            "description": "具体地点（如 长沙、大西洋、跨年演讲现场）"
+          },
+          "figure": {
+            "type": "string",
+            "description": "具体人物（须素材源可查，如 曾国藩、张廷玉）"
+          },
+          "number": {
+            "type": "string",
+            "description": "具体数字（须素材源可查，如 3652 条、11 场、523 个词条、1000 天）"
+          }
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["section_id", "section_title", "section_type"],
+        "properties": {
+          "section_id": {
+            "type": "string",
+            "description": "段落编号，根据 article_type 格式不同（罗胖60秒：一段；罗辑思维长文：§NN；跨年演讲稿：开场/第N段/收束）"
+          },
+          "section_title": {
+            "type": "string",
+            "description": "段落标题（必为金句或动词驱动）"
+          },
+          "key_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "核心要点列表"
+          },
+          "section_type": {
+            "type": "string",
+            "enum": ["一段", "引子", "主体", "收束", "开场", "故事章节", "18字心法版块", "数字金句版块"],
+            "description": "段落类型（根据 article_type 不同有不同取值）"
+          },
+          "callouts_planned": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["躬身入局", "长期主义", "启发", "故事细节", "对仗金句", "数字金句", "动词驱动", "谦卑自嘲"]
+            },
+            "description": "计划使用的 callout 类型（罗振宇风格 7 种）"
+          },
+          "xinfa_planned": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["躬身入局", "长期主义", "启发式输出", "一具体就深刻", "一行动就创新", "一困惑就出门", "故事细节", "金句主义", "打比方", "举例降认知", "动词驱动", "谦卑自嘲"]
+            },
+            "description": "该段使用的心法"
+          },
+          "estimated_words": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "预估字数"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "article_title": "把日复一日留给 AI，把日新月异交给人类",
+      "article_subtitle": "我有一个启发",
+      "article_type": "罗辑思维长文",
+      "scqa_pattern": "TQA",
+      "author": "罗振宇",
+      "source_column": "时间的朋友",
+      "publish_date": "2026-01-01",
+      "target_reader": "终身学习者",
+      "core_insight": "把重复的交给 AI，把未知的留给自己",
+      "core_xinfa": ["躬身入局", "长期主义", "启发式输出", "金句主义"],
+      "scqa_nodes": [
+        {"node": "T", "section_id": "§01", "content": "你可能正在为 AI 焦虑"},
+        {"node": "Q", "section_id": "§02", "content": "AI 时代人类应该做什么"},
+        {"node": "A", "section_id": "§04", "content": "把日复一日留给 AI，把日新月异交给人类"}
+      ],
+      "xinfa_hits": [
+        {"xinfa": "躬身入局", "section_id": "§02"},
+        {"xinfa": "长期主义", "section_id": "§03"},
+        {"xinfa": "启发式输出", "section_id": "§05"}
+      ],
+      "story_details_planned": [
+        {
+          "section_id": "§02",
+          "time": "2019-12-31",
+          "place": "跨年演讲",
+          "figure": "曾国藩",
+          "number": "结硬寨打呆仗"
+        }
+      ],
+      "sections": [
+        {
+          "section_id": "§01",
+          "section_title": "我是罗胖，今天想给你一个启发",
+          "section_type": "引子",
+          "callouts_planned": ["谦卑自嘲", "启发"],
+          "xinfa_planned": ["谦卑自嘲", "启发式输出"],
+          "estimated_words": 200
+        },
+        {
+          "section_id": "§02",
+          "section_title": "AI 来了，焦虑来了，躬身入局的机会也来了",
+          "section_type": "主体",
+          "callouts_planned": ["躬身入局", "故事细节"],
+          "xinfa_planned": ["躬身入局", "故事细节"],
+          "estimated_words": 600
+        },
+        {
+          "section_id": "§03",
+          "section_title": "1000 天视角：长期主义不是熬时间",
+          "section_type": "主体",
+          "callouts_planned": ["长期主义", "数字金句"],
+          "xinfa_planned": ["长期主义", "一具体就深刻"],
+          "estimated_words": 500
+        },
+        {
+          "section_id": "§04",
+          "section_title": "把日复一日留给 AI，把日新月异交给人类",
+          "section_type": "主体",
+          "callouts_planned": ["对仗金句", "动词驱动"],
+          "xinfa_planned": ["金句主义", "动词驱动"],
+          "estimated_words": 500
+        },
+        {
+          "section_id": "§05",
+          "section_title": "我有一个启发",
+          "section_type": "收束",
+          "callouts_planned": ["启发", "对仗金句"],
+          "xinfa_planned": ["启发式输出", "金句主义"],
+          "estimated_words": 200
+        }
+      ]
+    },
+    {
+      "article_title": "合作者比评价者稀缺一万倍",
+      "article_type": "罗胖60秒",
+      "scqa_pattern": "PEI",
+      "author": "罗振宇",
+      "source_column": "罗胖60秒",
+      "publish_date": "2025-12-15",
+      "target_reader": "大众读者",
+      "core_insight": "现代社会缺的不是评价者，是合作者",
+      "core_xinfa": ["启发式输出", "金句主义"],
+      "scqa_nodes": [
+        {"node": "P", "section_id": "一段", "content": "你常为要不要做纠结，去问身边一圈人"},
+        {"node": "E", "section_id": "一段", "content": "现代社会面对的是怎么办，缺的是合作者不是评价者"},
+        {"node": "I", "section_id": "一段", "content": "合作者比评价者稀缺一万倍"}
+      ],
+      "xinfa_hits": [
+        {"xinfa": "启发式输出", "section_id": "一段"},
+        {"xinfa": "金句主义", "section_id": "一段"}
+      ],
+      "story_details_planned": [
+        {
+          "section_id": "一段",
+          "time": "日常",
+          "place": "饭局",
+          "figure": "合作者",
+          "number": "一万倍"
+        }
+      ],
+      "sections": [
+        {
+          "section_id": "一段",
+          "section_title": "合作者比评价者稀缺一万倍",
+          "section_type": "一段",
+          "callouts_planned": ["启发", "对仗金句"],
+          "xinfa_planned": ["启发式输出", "金句主义"],
+          "estimated_words": 120
+        }
+      ]
+    }
+  ]
+}

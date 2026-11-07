@@ -1,0 +1,30 @@
+{
+  "name": "dsh-bookwriter",
+  "version": "0.1.0",
+  "description": "双风格长文写作：刘润风格（商业洞察/方法论）+ 罗振宇风格（认知/启发/商业）。纯技能零 API key。",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/host.js",
+  "exports": {
+    ".": "./src/host.js",
+    "./client": "./dist/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "icon": "./icon.svg",
+  "files": ["src", "dist", "lib", "skills", "locale/*.json", "cordis.patch.yml", "icon.svg", "README.md", "LICENSE"],
+  "keywords": ["dsh-plugin", "deepseek-harness", "writing", "bookwriter"],
+  "engines": { "node": "^22.19.0 || >=24.0.0", "dsh": ">=0.2.1-rc.2 <0.3.0" },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "immediately": true, "inject": [] }
+  },
+  "devDependencies": { "esbuild": "^0.25.10" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node test/lib.test.mjs",
+    "selftest": "node scripts/selftest.mjs",
+    "prepack": "npm run build"
+  }
+}

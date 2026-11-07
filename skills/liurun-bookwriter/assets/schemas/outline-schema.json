@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Article Outline",
+  "description": "刘润风格商业长文大纲数据结构，用于定义长文的整体结构和段落安排",
+  "type": "object",
+  "required": ["article_title", "article_type", "scqa_pattern", "sections"],
+  "properties": {
+    "article_title": {
+      "type": "string",
+      "description": "长文标题"
+    },
+    "article_subtitle": {
+      "type": "string",
+      "description": "副标题"
+    },
+    "article_type": {
+      "type": "string",
+      "enum": ["3段式", "10点式", "32条"],
+      "enumDescriptions": [
+        "3段式：1引言+3主体+1最后的话，1500-2500字，编辑基本要求",
+        "10点式：1开头+10个环环相扣的点，2500-4000字，参访/案例/专访",
+        "32条：32句克制要点，2000-3000字，热点回应/事件评论"
+      ],
+      "description": "长文结构类型"
+    },
+    "scqa_pattern": {
+      "type": "string",
+      "enum": ["ASC", "CSA", "QSCA", "无"],
+      "enumDescriptions": [
+        "ASC开门见山式：答案-背景-冲突，3段式默认",
+        "CSA突出忧虑式：冲突-背景-答案，32条默认",
+        "QSCA突出信心式：问题-背景-冲突-答案，10点式默认",
+        "无：没有显式 SCQA（如纯故事、纯复盘）"
+      ],
+      "description": "SCQA 逻辑势能变体"
+    },
+    "author": {
+      "type": "string",
+      "default": "刘润",
+      "description": "创作者（默认刘润）"
+    },
+    "source_column": {
+      "type": "string",
+      "description": "出处栏目（公众号「刘润」/ 视频号 / 5分钟商学院 / 等）"
+    },
+    "publish_date": {
+      "type": "string",
+      "format": "date",
+      "description": "发布日期，格式：YYYY-MM-DD"
+    },
+    "target_reader": {
+      "type": "string",
+      "description": "目标读者（商业读者 / 创业者 / 管理者 / 投资人）"
+    },
+    "core_insight": {
+      "type": "string",
+      "description": "核心洞察，一句话说清这篇想讲什么"
+    },
+    "scqa_nodes": {
+      "type": "array",
+      "description": "SCQA 节点显式标注",
+      "items": {
+        "type": "object",
+        "required": ["node", "section_id", "content"],
+        "properties": {
+          "node": {
+            "type": "string",
+            "enum": ["S", "C", "Q", "A"],
+            "description": "SCQA 节点类型"
+          },
+          "section_id": {
+            "type": "string",
+            "description": "所在段落编号"
+          },
+          "content": {
+            "type": "string",
+            "description": "该节点的内容"
+          }
+        }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["section_id", "section_title"],
+        "properties": {
+          "section_id": {
+            "type": "string",
+            "description": "段落编号，根据 article_type 格式不同"
+          },
+          "section_title": {
+            "type": "string",
+            "description": "段落标题（断言句或金句）"
+          },
+          "key_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "核心要点列表"
+          },
+          "section_type": {
+            "type": "string",
+            "enum": ["引言", "主体", "收束", "点", "条", "场景导入", "打破认知", "核心逻辑", "举一反三", "回顾总结"],
+            "description": "段落类型（根据 article_type 不同有不同取值）"
+          },
+          "callouts_planned": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["同理心", "自污", "金句", "故事", "举例", "比方", "推敲"]
+            },
+            "description": "计划使用的 callout 类型"
+          },
+          "estimated_words": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "预估字数"
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "article_title": "如何用刘润风格写一篇关于诚信的商业评论",
+      "article_subtitle": "重复博弈：诚信的本质",
+      "article_type": "3段式",
+      "scqa_pattern": "ASC",
+      "author": "刘润",
+      "source_column": "公众号「刘润」",
+      "publish_date": "2026-07-10",
+      "target_reader": "商业读者、创业者",
+      "core_insight": "诚信的本质是选择与世界重复博弈",
+      "scqa_nodes": [
+        {"node": "A", "section_id": "§02", "content": "诚信就是选择与世界重复博弈"},
+        {"node": "S", "section_id": "§02", "content": "销售公式：流量×转化率×客单价×复购率"},
+        {"node": "C", "section_id": "§03", "content": "单次博弈 vs 重复博弈的差异"},
+        {"node": "A", "section_id": "§04", "content": "李嘉诚少拿两分是对世界的存款"}
+      ],
+      "sections": [
+        {
+          "section_id": "§01",
+          "section_title": "引言：你肯定被宰过",
+          "section_type": "引言",
+          "callouts_planned": ["同理心"],
+          "estimated_words": 300
+        },
+        {
+          "section_id": "§02",
+          "section_title": "真正的诚信，是选择重复博弈",
+          "section_type": "主体",
+          "callouts_planned": ["举例", "金句"],
+          "estimated_words": 500
+        },
+        {
+          "section_id": "§03",
+          "section_title": "淘宝的差评机制，让单次博弈变成重复博弈",
+          "section_type": "主体",
+          "callouts_planned": ["举例", "比方"],
+          "estimated_words": 500
+        },
+        {
+          "section_id": "§04",
+          "section_title": "李嘉诚少拿的那两分，是对世界的存款",
+          "section_type": "主体",
+          "callouts_planned": ["故事", "金句"],
+          "estimated_words": 500
+        },
+        {
+          "section_id": "§05",
+          "section_title": "最后的话",
+          "section_type": "收束",
+          "callouts_planned": ["金句"],
+          "estimated_words": 200
+        }
+      ]
+    },
+    {
+      "article_title": "关于鸿蒙我想说的 32 句话",
+      "article_type": "32条",
+      "scqa_pattern": "CSA",
+      "author": "刘润",
+      "source_column": "公众号「刘润」",
+      "publish_date": "2019-08-09",
+      "core_insight": "鸿蒙发布会的 32 个克制观察",
+      "scqa_nodes": [
+        {"node": "C", "section_id": "第01句", "content": "鸿蒙发布会的争议"},
+        {"node": "S", "section_id": "第10句", "content": "华为的历史与积累"},
+        {"node": "A", "section_id": "第25句", "content": "对鸿蒙的判断"}
+      ],
+      "sections": [
+        {"section_id": "第01句", "section_title": "第一句要点", "section_type": "条", "estimated_words": 80},
+        {"section_id": "第32句", "section_title": "最后一句要点", "section_type": "条", "estimated_words": 80}
+      ]
+    }
+  ]
+}
