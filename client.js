@@ -1,17 +1,21 @@
 // ============================================================================
-// 双风格长文写作 · 浏览器半边（最小面板）。
+// 双风格长文写作 · 浏览器半边（书稿进度 / 风格 / 指南 三标签面板）。
 // ============================================================================
 const h = require('react').createElement
 const { useState, useEffect } = require('react')
 
 const PANEL_ID = 'bookwriter'
 const BASE = 'bookwriter'
+const STATUS_STYLE = {
+  todo: ['#8a8a92', '○ 待写'],
+  drafting: ['#b58a00', '✎ 写作中'],
+  done: ['#1a7f37', '✓ 完成'],
+}
 
 function PanelIcon(props) {
   return h('svg', { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', ...props },
-    h('rect', { x: 2.5, y: 2.5, width: 19, height: 19, rx: 5, fill: '#1a5276' }),
-    h('path', { d: 'M6 7h9M6 10.5h12M6 14h8M6 17.5h5', stroke: '#fff', 'stroke-width': 1.5, 'stroke-linecap': 'round' }),
-    h('path', { d: 'M17 15l2.5 2.5', stroke: '#ffd24a', 'stroke-width': 1.4, 'stroke-linecap': 'round' }))
+    h('rect', { x: 2.5, y: 2.5, width: 19, height: 19, rx: 5, fill: '#5b3a8e' }),
+    h('path', { d: 'M7 17V8l2.5 3L12 8l2.5 3L17 8v9', stroke: '#d6c7f0', 'stroke-width': 1.7, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', fill: 'none' }))
 }
 
 async function fetchJson(path) {
@@ -21,63 +25,100 @@ async function fetchJson(path) {
   return data
 }
 
-const STYLES = [
-  ['📝 刘润风格', '商业洞察 / 方法论', '商业评论、企业案例、参访游记、5 分钟商学院体、商业格言金句', 'liurun-bookwriter'],
-  ['💭 罗振宇风格', '认知 / 启发 / 商业', '认知升级、AI 时代应对、个人成长、跨年演讲体、自嘲开场、60 秒决策框架', 'luozhenyu-bookwriter'],
-]
-
-function GuideTab() {
-  const [skills, setSkills] = useState(null)
+function ProgressTab() {
+  const [book, setBook] = useState(null)
+  const [error, setError] = useState('')
   useEffect(() => {
-    fetchJson('/api/skills').then((d) => setSkills(d.skills)).catch(() => {})
+    fetchJson('/api/book').then((d) => setBook(d.book)).catch((e) => setError(e.message))
   }, [])
+  if (error) return h('div', { style: styles.error }, error)
+  if (book === null) return h('div', { style: styles.muted }, '加载中…')
+  if (!book.chapters.length) {
+    return h('div', { style: styles.muted },
+      '还没有书稿。在对话里说「用刘润风格写一本关于定价的小册子，10 章」，模型会 init 章节骨架并逐章推进。')
+  }
+  const done = book.chapters.filter((c) => c.status === 'done').length
+  const pct = Math.round((done / book.chapters.length) * 100)
   return h('div', null,
     h('div', { style: styles.card },
-      h('div', { style: styles.sectionTitle }, '两种风格怎么选'),
-      h('div', { style: styles.styleList },
-        STYLES.map(([title, tag, desc, cmd]) => h('div', { key: cmd, style: styles.styleRow },
-          h('div', null, h('span', { style: styles.styleName }, title), h('span', { style: styles.styleTag }, tag)),
-          h('div', { style: styles.muted }, desc),
-          h('div', { style: styles.quote }, `/${cmd} <主题>`))))),
+      h('div', { style: styles.sectionTitle }, `📘 ${book.project}`),
+      h('div', { style: styles.mutedSmall }, `风格：${book.style} · ${done}/${book.chapters.length} 章完成（${pct}%）`),
+      h('div', { style: styles.barWrap }, h('div', { style: { ...styles.bar, width: `${pct}%` } }))),
+    h('div', { style: styles.card },
+      book.chapters.map((c) => {
+        const [color, label] = STATUS_STYLE[c.status] || STATUS_STYLE.todo
+        return h('div', { key: c.index, style: styles.chapter },
+          h('span', { style: { color, fontSize: 12, fontWeight: 700, minWidth: 62 } }, label),
+          h('span', { style: styles.chapterTitle }, `${c.index}. ${c.title}`),
+          c.summary ? h('div', { style: styles.mutedSmall }, c.summary) : null)
+      })))
+}
+
+function StylesTab() {
+  const [stylesList, setStyles] = useState(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    fetchJson('/api/styles').then((d) => setStyles(d.styles)).catch((e) => setError(e.message))
+  }, [])
+  if (error) return h('div', { style: styles.error }, error)
+  if (stylesList === null) return h('div', { style: styles.muted }, '加载中…')
+  const labels = { 'liurun-bookwriter': '刘润风格', 'luozhenyu-bookwriter': '罗振宇风格' }
+  return h('div', null, stylesList.map((s) => h('div', { key: s.name, style: styles.card },
+    h('div', { style: styles.sectionTitle }, labels[s.name] || s.name),
+    h('div', { style: styles.mutedSmall }, s.description || ''))))
+}
+
+function GuideTab() {
+  return h('div', null,
     h('div', { style: styles.card },
       h('div', { style: styles.sectionTitle }, '怎么用'),
       h('div', { style: styles.stepList },
-        h('div', { style: styles.quote }, '/liurun-bookwriter 写一篇关于瑞幸咖啡商业模式的评论'),
-        h('div', { style: styles.quote }, '/luozhenyu-bookwriter 写一篇 AI 时代的个人成长启发'),
-        '不确定？核心问题——你的文章是"解决问题"还是"激发思考"？前者选刘润，后者选罗振宇。')),
+        h('div', { style: styles.quote }, '「用刘润风格写一本《定价的常识》小册子，8 章」'),
+        h('div', { style: styles.quote }, '「用罗振宇风格写一份 20 节的商业思维专栏大纲」'),
+        '模型 init 章节骨架 → 逐章按风格方法论写正文 → 每章完成用 status 记录 → 进度在这里可见。')),
     h('div', { style: styles.card },
-      h('div', { style: styles.sectionTitle }, '技能目录'),
-      skills === null ? h('div', { style: styles.muted }, '加载中…') : null,
-      skills?.map((s) => h('div', { key: s.name, style: styles.skillDesc }, `/${s.name}: ${s.description.slice(0, 80)}…`))))
+      h('div', { style: styles.sectionTitle }, '1 个工具'),
+      h('div', { style: styles.muted, lineHeight: 2 },
+        h('b', null, 'bookwriter_project'), ' — init 建书（风格+章节清单）/ status 更新章节进度 / list 看全书 / clear 清空。')),
+    h('div', { style: styles.card },
+      h('div', { style: styles.sectionTitle }, '两种风格'),
+      h('div', { style: styles.muted, lineHeight: 1.8 },
+        '刘润风格——商业洞察、结构化拆解、金句收尾；罗振宇风格——故事开场、跨域联想、口语化转述。写作时模型自动加载对应方法论。')))
 }
 
+const TABS = [['progress', '书稿进度'], ['styles', '风格'], ['guide', '指南']]
+
 function Panel() {
-  const [tab, setTab] = useState('guide')
+  const [tab, setTab] = useState('progress')
   return h('div', { style: styles.wrap },
-    h('div', { style: styles.row },
-      h('button', { style: styles.tabActive }, '📖 风格选择')),
-    h(GuideTab))
+    h('div', { style: styles.tabBar },
+      TABS.map(([id, label]) => h('button', {
+        key: id, style: tab === id ? styles.tabActive : styles.tab, onClick: () => setTab(id),
+      }, label))),
+    tab === 'progress' ? h(ProgressTab) : tab === 'styles' ? h(StylesTab) : h(GuideTab))
 }
 
 const styles = {
   wrap: { padding: 16, overflow: 'auto', height: '100%', boxSizing: 'border-box', fontFamily: '-apple-system, "Segoe UI", "Microsoft YaHei", sans-serif', fontSize: 13, color: '#1a1a1a' },
-  row: { display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 },
-  tabActive: { padding: '8px 16px', border: '1px solid #1a5276', borderRadius: 8, background: '#e8f0f8', color: '#1a3a5c', fontWeight: 600, fontSize: 13 },
+  tabBar: { display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' },
+  tab: { padding: '8px 16px', border: '1px solid #d9d9de', borderRadius: 8, background: '#fff', color: '#1a1a1a', cursor: 'pointer', fontSize: 13 },
+  tabActive: { padding: '8px 16px', border: '1px solid #5b3a8e', borderRadius: 8, background: '#f0eaf9', color: '#5b3a8e', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   card: { background: '#fff', border: '1px solid #e3e3e6', borderRadius: 10, padding: 12, marginBottom: 10 },
-  sectionTitle: { fontWeight: 700, marginBottom: 6, color: '#1a3a5c' },
+  sectionTitle: { fontWeight: 700, marginBottom: 6 },
   stepList: { lineHeight: 1.9 },
-  quote: { background: '#e8f0f8', borderRadius: 6, padding: '4px 10px', margin: '4px 0', color: '#1a3a5c', fontFamily: 'Consolas, monospace', fontSize: 12.5 },
-  styleList: { display: 'grid', gap: 10 },
-  styleRow: { background: '#fafafa', borderRadius: 8, padding: '10px 12px' },
-  styleName: { fontWeight: 700, color: '#1a3a5c' },
-  styleTag: { marginLeft: 8, padding: '1px 8px', borderRadius: 999, background: '#e8f0f8', color: '#1a3a5c', fontSize: 11 },
-  muted: { color: '#8a8a92' },
-  skillDesc: { padding: '4px 0', color: '#4a4a50' },
+  quote: { background: '#f0eaf9', borderRadius: 6, padding: '4px 10px', margin: '4px 0', color: '#5b3a8e' },
+  muted: { color: '#8a8a92', lineHeight: 1.8 },
+  mutedSmall: { color: '#a0a0a8', fontSize: 12, lineHeight: 1.7 },
+  error: { color: '#c0392b', padding: 12 },
+  barWrap: { background: '#eee', borderRadius: 999, height: 8, marginTop: 8, overflow: 'hidden' },
+  bar: { background: '#5b3a8e', height: '100%', borderRadius: 999, transition: 'width .3s' },
+  chapter: { padding: '6px 0', borderBottom: '1px solid #f0f0f2' },
+  chapterTitle: { fontSize: 12.5 },
 }
 
 function apply(ctx) {
   ctx.slots.inject('sidebar.panellist', () =>
-    ctx.slots.register({ name: 'sidebar.panellist', id: PANEL_ID, order: 22, label: () => '长文写作' }, PanelIcon))
+    ctx.slots.register({ name: 'sidebar.panellist', id: PANEL_ID, order: 15, label: () => '长文写作' }, PanelIcon))
   ctx.slots.inject('main', () =>
     ctx.slots.register({ name: 'main', key: PANEL_ID }, Panel))
 }

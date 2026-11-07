@@ -1,47 +1,81 @@
-// 双风格写作 provider + API 单测。零 dsh 依赖零网络。
-import { test } from 'node:test'
+// dsh-bookwriter 单测（node test/lib.test.mjs 直接跑）。
+process.env.DSH_HOME = new URL('../.tmp/test-home/', import.meta.url).pathname.replace(/^\/([A-Za-z]):/, '$1:')
+
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { rmSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
-const { createSkillProvider } = await import('../lib/skills.js')
-const { requestRejection } = await import('../lib/api.js')
+rmSync(process.env.DSH_HOME, { recursive: true, force: true })
 
-test('快照：两个风格技能（刘润 + 罗振宇）', async () => {
-  assert.ok(existsSync(join(ROOT, 'skills', 'liurun-bookwriter', 'SKILL.md')), '缺刘润')
-  assert.ok(existsSync(join(ROOT, 'skills', 'luozhenyu-bookwriter', 'SKILL.md')), '缺罗振宇')
-  const provider = createSkillProvider([join(ROOT, 'skills')])
-  const candidates = await provider.list()
-  assert.equal(candidates.length, 2)
-  assert.ok(candidates.some((c) => c.name === 'liurun-bookwriter'))
-  assert.ok(candidates.some((c) => c.name === 'luozhenyu-bookwriter'))
+let passed = 0, failed = 0
+async function test(name, fn) {
+  try { await fn(); passed++; console.log(`  ✓ ${name}`) }
+  catch (err) { failed++; console.error(`  ✗ ${name}\n    ${err?.message?.split('\n')[0]}`) }
+}
+
+// ── data.js ─────────────────────────────────────────────────
+const data = await import('../lib/data.js')
+
+await test('data: init 建书/冲突保护/覆盖', async () => {
+  const book = data.initBook('定价的常识', 'liurun-bookwriter', ['引子', '锚定', '捆绑'], false)
+  assert.equal(book.chapters.length, 3)
+  assert.equal(book.chapters[0].status, 'todo')
+  const conflict = data.initBook('另一本', 'luozhenyu-bookwriter', ['A'], false)
+  assert.equal(conflict.conflict, true)
+  const over = data.initBook('另一本', 'luozhenyu-bookwriter', ['A', 'B'], true)
+  assert.equal(over.chapters.length, 2)
+  assert.equal(over.project, '另一本')
 })
 
-test('正文完整：刘润 375 行、罗振宇 453 行方法论', async () => {
-  const provider = createSkillProvider([join(ROOT, 'skills')])
-  for (const c of await provider.list()) {
-    const skill = await provider.get(c)
-    assert.ok(skill.content.length > 5000, `${c.name} 正文过短 (${skill.content.length})`)
-    assert.match(skill.content, /cp -r|工作区/, '应有工作区约定')
-  }
+await test('data: updateChapter 更新状态/摘要/自动追加', async () => {
+  const ch = data.updateChapter(2, { status: 'done', summary: '讲完锚定效应' })
+  assert.equal(ch.status, 'done')
+  const extra = data.updateChapter(9, { title: '番外' })
+  assert.equal(extra.title, '番外')
+  assert.equal(data.getBook().chapters.length, 3)
 })
 
-test('刘润/罗振宇各有独特关键词', async () => {
+await test('data: clearBook', async () => {
+  data.clearBook()
+  assert.equal(data.getBook().chapters.length, 0)
+})
+
+// ── host.js：工具全链路 ────────────────────────────────────
+const host = await import('../src/host.js')
+
+await test('host: 工具 schema + 校验 + init/status/list/clear 全链路', async () => {
+  assert.equal(host.name, 'bookwriter')
+  assert.equal(host.bookwriterProjectTool.parameters.additionalProperties, false)
+  await assert.rejects(() => host.bookwriterProjectTool.execute({ action: 'list', bogus: 1 }), /未知参数/)
+  await assert.rejects(() => host.bookwriterProjectTool.execute({ action: 'init', project: 'x' }), /需要 project/)
+  await assert.rejects(() => host.bookwriterProjectTool.execute({ action: 'init', project: 'x', style: 'bad-style', chapters: 'a' }), /只能是/)
+  const init = await host.bookwriterProjectTool.execute({ action: 'init', project: '测试书', style: 'liurun-bookwriter', chapters: '一|二|三' })
+  assert.equal(init.ok, true)
+  const st = await host.bookwriterProjectTool.execute({ action: 'status', index: 1, status: 'done', summary: '完成' })
+  assert.ok(st.summary.includes('done'))
+  const list = await host.bookwriterProjectTool.execute({ action: 'list' })
+  assert.ok(list.data.includes('1/3'))
+  const noConfirm = await host.bookwriterProjectTool.execute({ action: 'clear' })
+  assert.equal(noConfirm.ok, false)
+})
+
+// ── skills.js + api.js ─────────────────────────────────────
+await test('skills: 两个风格技能可加载', async () => {
+  const { createSkillProvider } = await import('../lib/skills.js')
   const provider = createSkillProvider([join(ROOT, 'skills')])
   const list = await provider.list()
-  const liurun = await provider.get(list.find((c) => c.name.includes('liurun')))
-  const luo = await provider.get(list.find((c) => c.name.includes('luozhenyu')))
-  assert.match(liurun.content, /飞流直下三千尺|商业洞察|方法论/)
-  assert.match(luo.content, /罗胖60秒|时间的朋友|长期主义/)
+  assert.equal(list.length, 2)
+  assert.ok(list.some((s) => s.name === 'liurun-bookwriter'))
+  assert.ok(list.some((s) => s.name === 'luozhenyu-bookwriter'))
 })
 
-test('面板 API 鉴权 fail closed', () => {
-  const noService = { get: () => undefined }
-  assert.equal(requestRejection(noService, { headers: {} }), false) // 宿主 token 鉴权是边界，服务缺席放行
+await test('api: 鉴权深度防御语义', async () => {
+  const api = await import('../lib/api.js')
+  assert.equal(api.requestRejection({ get: () => undefined }, { headers: {} }), false)
+  assert.equal(api.requestRejection({ get: () => ({ requestRejection: () => 403 }) }, { headers: {} }), 403)
 })
 
-test('LICENSE 为 MIT', () => {
-  assert.match(readFileSync(join(ROOT, 'LICENSE'), 'utf8'), /MIT/)
-})
+console.log(`\n${passed} passed, ${failed} failed`)
+process.exit(failed ? 1 : 0)

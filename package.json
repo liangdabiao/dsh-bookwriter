@@ -1,7 +1,7 @@
 {
   "name": "dsh-bookwriter",
-  "version": "0.1.0",
-  "description": "双风格长文写作：刘润风格（商业洞察/方法论）+ 罗振宇风格（认知/启发/商业）。纯技能零 API key。",
+  "version": "0.2.0",
+  "description": "双风格长文写作工作台：刘润/罗振宇方法论技能 + bookwriter_project 章节清单持久化（init/status/list）。侧栏书稿进度面板。",
   "license": "MIT",
   "type": "module",
   "main": "src/host.js",
@@ -13,14 +13,40 @@
     "./package.json": "./package.json"
   },
   "icon": "./icon.svg",
-  "files": ["src", "dist", "lib", "skills", "locale/*.json", "cordis.patch.yml", "icon.svg", "README.md", "LICENSE"],
-  "keywords": ["dsh-plugin", "deepseek-harness", "writing", "bookwriter"],
-  "engines": { "node": "^22.19.0 || >=24.0.0", "dsh": ">=0.2.1-rc.2 <0.3.0" },
-  "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
-    "client": { "platform": "web", "immediately": true, "inject": [] }
+  "files": [
+    "src",
+    "dist",
+    "lib",
+    "skills",
+    "locale/*.json",
+    "cordis.patch.yml",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "writing",
+    "bookwriter"
+  ],
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0",
+    "dsh": ">=0.2.1-rc.2 <0.3.0"
   },
-  "devDependencies": { "esbuild": "^0.25.10" },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": []
+    }
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.10"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node test/lib.test.mjs",
