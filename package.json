@@ -1,7 +1,7 @@
 {
   "name": "dsh-bookwriter",
-  "version": "0.2.0",
-  "description": "双风格长文写作工作台：刘润/罗振宇方法论技能 + bookwriter_project 章节清单持久化（init/status/list）。侧栏书稿进度面板。",
+  "version": "0.3.0",
+  "description": "双风格长文写作工作台：刘润/罗振宇方法论技能 + bookwriter_project 书稿工具（init/status/list/books/current/history/stats/clear，重建与清空转归档）。侧栏「长文写作」工作台：概览 / 我的书稿 / 生成历史 / 新建书稿 / 两种风格。",
   "license": "MIT",
   "type": "module",
   "main": "src/host.js",
@@ -17,6 +17,7 @@
     "src",
     "dist",
     "lib",
+    "lab",
     "skills",
     "locale/*.json",
     "cordis.patch.yml",

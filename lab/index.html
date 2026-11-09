@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN" data-scheme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>长文写作 · 工作台</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<aside class="rail">
+  <a class="brand" href="#/">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 5.5c2.2-.9 4.2-.9 6 0v13c-1.8-.9-3.8-.9-6 0z"></path>
+        <path d="M20 5.5c-2.2-.9-4.2-.9-6 0v13c1.8-.9 3.8-.9 6 0z"></path>
+        <path d="M4 5.5v13M20 5.5v13"></path>
+      </svg>
+    </span>
+    <span class="brand-text"><b>长文写作</b><small>刘润 · 罗振宇 · dsh-bookwriter</small></span>
+  </a>
+  <nav class="nav">
+    <div class="nav-group">工作台</div>
+    <a href="#/" data-view="home">概览</a>
+    <a href="#/books" data-view="books">我的书稿<span class="count" id="nav-books"></span></a>
+    <a href="#/history" data-view="history">生成历史<span class="count" id="nav-history"></span></a>
+    <a href="#/new" data-view="new">新建书稿</a>
+    <div class="nav-group">方法</div>
+    <a href="#/guide" data-view="guide">两种风格</a>
+  </nav>
+  <div class="rail-foot" id="rail-foot"></div>
+</aside>
+
+<main class="main" id="app"><div class="loading">加载中…</div></main>
+
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-label="详情">
+  <div class="viewer-bar">
+    <span class="title" id="viewer-title"></span>
+    <span class="grow"></span>
+    <button id="viewer-copy" hidden title="复制">复制</button>
+    <button id="viewer-close" title="关闭（Esc）">关闭</button>
+  </div>
+  <div class="viewer-body" id="viewer-body"></div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="app.js"></script>
+</body>
+</html>

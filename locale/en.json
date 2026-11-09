@@ -1,1 +1,6 @@
-{ "meta": { "title": "Bookwriter", "description": "Dual-style long-form writing: business insight + cognitive inspiration." } }
+{
+  "meta": {
+    "title": "Bookwriter",
+    "description": "Two complete long-form writing methodologies: Liurun (business insight) and Luo Zhenyu (cognitive inspiration). Sidebar workbench with overview, books (chapter progress, archived books switchable), generation history, new-book form and style comparison. Pure skills, no API key."
+  }
+}
