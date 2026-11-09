@@ -3,6 +3,8 @@
 刘润风格（商业洞察/方法论/案例拆解）+ 罗振宇风格（认知/启发/演讲）两个长文写作技能，外加一个「书稿工作台」：
 先立章节骨架，再逐章写正文，每章的进度与改动都有记录。MIT（liangdabiao）。
 
+<img width="2487" height="1071" alt="image" src="https://github.com/user-attachments/assets/c7d98518-53ac-4989-b974-6367d9eb5d70" />
+
 ## 装了什么
 
 | 能力 | 说明 |
