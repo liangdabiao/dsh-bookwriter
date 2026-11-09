@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { createSkillProvider } from '../lib/skills.js'
 import { registerApi } from '../lib/api.js'
 import {
-  getBook, getBookById, initBook, updateChapter, clearBook, listBooks, setCurrentBook,
+  getBook, getBookById, getChapter, initBook, updateChapter, clearBook, listBooks, setCurrentBook,
   listHistory, stats, renderOutline, KIND_LABEL, STYLE_NAMES, STATUSES
 } from '../lib/data.js'
 
@@ -53,24 +53,28 @@ const result = (ok, summary, data = '') => ({ ok, summary, data })
 export const bookwriterProjectTool = {
   name: 'bookwriter_project',
   description:
-    '管理长文/书稿的章节清单与进度（持久化，多本书）：init 建书（项目名 + 风格 + 章节标题清单，覆盖旧书要 confirm，旧书转归档可切回）、' +
-    'status 更新某章进度（todo/drafting/done + 一句话摘要）、list 看当前书进度、books 看全部书稿（含归档）、' +
-    'current 切换到某本书继续写、history 看生成历史、stats 汇总、clear 清空当前书（转归档）。' +
-    '写长篇时先 init 章节骨架，每写完一章用 status 记录，用户可在侧栏「长文写作」工作台看进度。',
+    '管理长文/书稿的章节清单与进度（持久化，多本书，**每章正文也存在这里**）：init 建书（项目名 + 风格 + 章节标题清单，覆盖旧书要 confirm，旧书转归档可切回）、' +
+    'status 更新某章进度（todo/drafting/done + 一句话摘要 + **content 正文**，正文会存进书稿、用户可在工作台点开读）、' +
+    'list 看当前书进度、books 看全部书稿（含归档）、current 切换到某本书继续写、chapter 读某章正文、' +
+    'history 看生成历史、stats 汇总、clear 清空当前书（转归档）。' +
+    '写长篇时先 init 章节骨架；每写完一章用 status 记录并把正文一起传进来（或传 contentPath 指向工作区的 md 文件），' +
+    '用户可在侧栏「长文写作」工作台里点开逐章阅读。',
   parameters: {
     type: 'object',
     additionalProperties: false,
     required: ['action'],
     properties: {
-      action: str('init 建书；status 更新章节；list 当前书进度；books 全部书稿；current 切换当前书；history 生成历史；stats 汇总；clear 清空当前书', { enum: ['init', 'status', 'list', 'books', 'current', 'history', 'stats', 'clear'] }),
+      action: str('init 建书；status 更新章节（可带正文）；list 当前书进度；books 全部书稿；current 切换当前书；chapter 读某章正文；history 生成历史；stats 汇总；clear 清空当前书', { enum: ['init', 'status', 'list', 'books', 'current', 'chapter', 'history', 'stats', 'clear'] }),
       project: str('init：书稿/项目名'),
       style: str(`init：写作风格，${STYLE_NAMES.join(' 或 ')}`, { enum: STYLE_NAMES }),
       chapters: str('init：章节标题清单，竖线分隔，如「第一章 引子|第二章 入局|第三章 破局」'),
-      index: num('status：章节序号（从 1 开始）'),
+      index: num('status/chapter：章节序号（从 1 开始）'),
       title: str('status：可选，修正章节标题'),
       status: str('status：todo 待写 / drafting 写作中 / done 完成', { enum: STATUSES }),
       summary: str('status：可选，一句话摘要（进进度面板）'),
-      id: str('current：书稿 id（books 里能看到）'),
+      content: str('status：可选，这一章的正文（markdown）。传了就会存进书稿，用户可在工作台点开读'),
+      contentPath: str('status：可选，正文文件路径（相对当前工作区或绝对路径）；content 为空时工作台按它读文件'),
+      id: str('current：书稿 id；chapter：可选，不传就读当前书'),
       kind: str('history：只看某一类事件', { enum: ['all', 'init', 'replace', 'status', 'clear', 'switch', 'delete'] }),
       q: str('history：关键词（书名/摘要）'),
       limit: num('history：最多几条，默认 20'),
@@ -95,9 +99,24 @@ export const bookwriterProjectTool = {
 
     if (args.action === 'status') {
       if (!args.index) throw new Error('status 需要 index（章节序号）。')
-      const chapter = updateChapter(args.index, { title: args.title, status: args.status, summary: args.summary })
+      const chapter = updateChapter(args.index, {
+        title: args.title, status: args.status, summary: args.summary,
+        content: args.content, contentPath: args.contentPath
+      })
       if (!chapter) return result(false, '还没有当前书稿，先 init（或用 books 看已有书稿、current 切过去）。')
-      return result(true, `第 ${chapter.index} 章「${chapter.title}」→ ${chapter.status}${chapter.summary ? `（${chapter.summary}）` : ''}。`)
+      const chars = String(chapter.content || '').length
+      return result(true, `第 ${chapter.index} 章「${chapter.title}」→ ${chapter.status}${chapter.summary ? `（${chapter.summary}）` : ''}${chars ? `，正文 ${chars} 字已存` : ''}。`)
+    }
+
+    if (args.action === 'chapter') {
+      if (!args.index) throw new Error('chapter 需要 index（第几章）。')
+      const data = getChapter(args.id, args.index)
+      if (!data) return result(false, `没有第 ${args.index} 章（先 list 看章节清单）。`)
+      if (!data.body.trim()) {
+        return result(false, `第 ${data.chapter.index} 章「${data.chapter.title}」还没有正文`,
+          '用 status 传 content="<正文 markdown>" 存进来，或传 contentPath 指向工作区里的 md 文件；之后用户在工作台能点开读。')
+      }
+      return result(true, `第 ${data.chapter.index} 章「${data.chapter.title}」（${data.body.length} 字，${data.source === 'file' ? '来自文件' : '内置'}）`, data.body)
     }
 
     if (args.action === 'books') {

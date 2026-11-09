@@ -39,7 +39,7 @@ try {
   const second = data.initBook('认知升级', 'luozhenyu-bookwriter', ['躬身入局', '长期主义'], true)
 
   const ping = await get(`${P}/api/ping`)
-  check('ping', ping.status === 200 && JSON.parse(ping.text).version === '0.3.0', ping.text)
+  check('ping', ping.status === 200 && String(JSON.parse(ping.text).version).startsWith('0.3.'), ping.text)
 
   const cat = JSON.parse((await get(`${P}/api/catalog`)).text)
   check('catalog: 两本书', cat.ok && cat.books.length === 2, `books=${cat.books.length}`)
@@ -63,6 +63,25 @@ try {
   check('book/current 切换', switched.status === 200 && switched.json.book.id === first.id, switched.json.summary)
   const afterSwitch = JSON.parse((await get(`${P}/api/catalog`)).text)
   check('切换后当前书是归档那本', afterSwitch.currentId === first.id && afterSwitch.books.find((b) => b.id === first.id).current)
+
+  // ── 章节正文：内联 content + contentPath 文件两种来源
+  data.updateChapter(1, { content: '# 引子\n\n定价从来不是算成本，而是猜人心。\n\n- 锚定\n- 捆绑' })
+  const ch = JSON.parse((await get(`${P}/api/chapter?book=${encodeURIComponent(first.id)}&index=1`)).text)
+  check('chapter: 内联正文可取', ch.ok && ch.body.includes('猜人心') && ch.source === 'inline', `${ch.body?.length} 字`)
+  const chEmpty = JSON.parse((await get(`${P}/api/chapter?book=${encodeURIComponent(first.id)}&index=2`)).text)
+  check('chapter: 没正文时 body 为空', chEmpty.ok && chEmpty.body === '' && chEmpty.source === 'none')
+
+  const { writeFileSync } = await import('node:fs')
+  const chapterFile = join(ROOT, 'ch3.md')
+  writeFileSync(chapterFile, '# 捆绑\n\n第三章的正文写在文件里。', 'utf8')
+  data.updateChapter(3, { contentPath: chapterFile })
+  const chFile = JSON.parse((await get(`${P}/api/chapter?book=${encodeURIComponent(first.id)}&index=3`)).text)
+  check('chapter: contentPath 文件可读', chFile.ok && chFile.source === 'file' && chFile.body.includes('正文写在文件里'), chFile.source)
+
+  const bookPayload = JSON.parse((await get(`${P}/api/book?id=${encodeURIComponent(first.id)}`)).text)
+  const c1 = bookPayload.book.chapters[0]
+  check('book: 章节不带正文本体但要标记', !('content' in c1) && c1.hasContent === true && c1.contentChars > 0, `chars=${c1.contentChars}`)
+  check('book: 文件正文也标记有内容', bookPayload.book.chapters[2].hasContent === true)
 
   const removed = await postJson(`${P}/api/book/remove`, { id: second.id })
   check('book/remove', removed.status === 200 && removed.json.ok === true)
@@ -93,3 +112,4 @@ try {
 
 console.log(failed ? `\n${failed} 项失败` : '\n全部通过')
 process.exit(failed ? 1 : 0)
+

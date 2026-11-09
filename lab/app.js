@@ -105,6 +105,85 @@ viewer.addEventListener('click', (e) => { if (e.target === viewer) closeViewer()
 addEventListener('keydown', (e) => { if (e.key === 'Escape' && !viewer.hidden) closeViewer() })
 viewerCopy.addEventListener('click', () => copy(viewerCopyText))
 
+// ---------------------------------------------------------------- 正文渲染（够用的 markdown 子集）
+
+const mdInline = (s) => esc(s)
+  .replace(/`([^`]+)`/g, '<code>$1</code>')
+  .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>')
+  .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+
+function mdToHtml(src) {
+  const lines = String(src || '').replace(/\r\n/g, '\n').split('\n')
+  const out = []
+  let i = 0
+  while (i < lines.length) {
+    const line = lines[i]
+    if (/^\s*```/.test(line)) {
+      const buf = []
+      i++
+      while (i < lines.length && !/^\s*```/.test(lines[i])) buf.push(lines[i++])
+      i++
+      out.push(`<pre><code>${esc(buf.join('\n'))}</code></pre>`)
+      continue
+    }
+    if (!line.trim()) { i++; continue }
+    if (/^\s*(-{3,}|\*{3,})\s*$/.test(line)) { out.push('<hr>'); i++; continue }
+    const h = line.match(/^(#{1,6})\s+(.*)$/)
+    if (h) { out.push(`<h${h[1].length}>${mdInline(h[2])}</h${h[1].length}>`); i++; continue }
+    if (/^\s*>\s?/.test(line)) {
+      const buf = []
+      while (i < lines.length && /^\s*>\s?/.test(lines[i])) buf.push(lines[i++].replace(/^\s*>\s?/, ''))
+      out.push(`<blockquote>${buf.map(mdInline).join('<br>')}</blockquote>`)
+      continue
+    }
+    const ol = line.match(/^\s*(\d+)[.)]\s+(.*)$/)
+    const ul = line.match(/^\s*[-*+]\s+(.*)$/)
+    if (ol || ul) {
+      const ordered = Boolean(ol)
+      const buf = []
+      while (i < lines.length) {
+        const m = lines[i].match(ordered ? /^\s*(\d+)[.)]\s+(.*)$/ : /^\s*[-*+]\s+(.*)$/)
+        if (!m) break
+        buf.push(m[ordered ? 2 : 1])
+        i++
+      }
+      out.push(ordered ? `<ol>${buf.map((t) => `<li>${mdInline(t)}</li>`).join('')}</ol>`
+        : `<ul>${buf.map((t) => `<li>${mdInline(t)}</li>`).join('')}</ul>`)
+      continue
+    }
+    const buf = [line]
+    i++
+    while (i < lines.length && lines[i].trim() && !/^(#{1,6}\s|\s*[-*+]\s|\s*>\s|\s*```)/.test(lines[i])) buf.push(lines[i++])
+    out.push(`<p>${buf.map(mdInline).join('<br>')}</p>`)
+  }
+  return out.join('\n')
+}
+
+// 打开某一章正文：先取内联正文，没有就读 contentPath 指向的文件（服务端已处理）
+async function openChapter(bookId, index) {
+  openViewer({ title: `第 ${index} 章 · 读取中…`, html: '<div class="loading">读取正文…</div>' })
+  try {
+    const data = await api(`/api/chapter?book=${encodeURIComponent(bookId)}&index=${index}`)
+    const body = String(data.body || '')
+    viewerTitle.textContent = `第 ${data.chapter.index} 章 · ${data.chapter.title}`
+    if (body.trim()) {
+      viewerBody.innerHTML = `<div class="chapter-body">${mdToHtml(body)}</div>
+        <div class="card-sub muted" style="margin-top:14px;font-size:11px">${body.length} 字${data.source === 'file' ? ' · 来自文件' : ' · 存在书稿里'}</div>`
+      viewerCopy.hidden = false
+      viewerCopyText = body
+    } else {
+      viewerBody.innerHTML = `<div class="empty-box"><b>这一章还没有正文</b>
+        让模型补一次：<code>bookwriter_project action=status index=${index} status=done content="&lt;正文 markdown&gt;"</code><br>
+        或者把正文写成文件后传 <code>contentPath</code>（相对工作区或绝对路径）。</div>`
+      viewerCopy.hidden = true
+      viewerCopyText = ''
+    }
+  } catch (err) {
+    viewerBody.innerHTML = `<div class="empty-box"><b>读不到这一章</b>${esc(err.message)}</div>`
+  }
+}
+
 // ---------------------------------------------------------------- 路由
 
 const route = () => location.hash.replace(/^#\/?/, '').split('?')[0]
@@ -158,7 +237,8 @@ function renderHome() {
       <div class="stat"><b>${s.chapters}</b><small>章节合计</small></div>
       <div class="stat jade"><b>${s.done}<span style="font-size:13px;color:var(--ink-3)">/${s.chapters}</span></b><small>已完成章节</small></div>
       <div class="stat"><b>${s.pct}%</b><small>完成度</small></div>
-      <div class="stat gold"><b>${s.events}</b><small>历史事件</small></div>
+      <div class="stat gold"><b>${s.chars}</b><small>总字数${s.withContent !== undefined ? `（${s.withContent} 章有正文）` : ''}</small></div>
+      <div class="stat"><b>${s.events}</b><small>历史事件</small></div>
     </div>
 
     ${current ? `
@@ -211,7 +291,8 @@ function renderHome() {
   if (cont) cont.addEventListener('click', () => start(
     `继续写《${current.project}》（bookwriter 当前书，风格 ${styleLabel(current.style)}）。` +
     `先用 bookwriter_project action=list 看进度，把第 ${nextCh || current.chapters} 章写成正文（遵循对应风格 skill 的方法论、结构与质量检查），` +
-    `写完用 action=status index=${nextCh || current.chapters} status=done summary="一句话摘要" 记录；再按同样方式推进后面的章节。`))
+    `写完用 action=status index=${nextCh || current.chapters} status=done summary="一句话摘要" content="<本章完整正文 markdown>" 一起存进来——` +
+    `注意 content 必须带上正文全文，否则工作台点开这一章是空的；我确认后再推进下一章。`))
   const open = app.querySelector('#open-current')
   if (open) open.addEventListener('click', () => { location.hash = '#/b/' + encodeURIComponent(current.id) })
 }
@@ -227,6 +308,7 @@ function bookCard(b) {
     <div class="card-foot">
       <div class="bar" style="flex:1"><i style="width:${pct(b.done, b.chapters)}%"></i></div>
       <span>${pct(b.done, b.chapters)}%</span>
+      ${b.chars ? `<span>${b.chars} 字</span>` : ''}
       <span>${date(b.updatedAt)}</span>
     </div>
   </div>`
@@ -317,10 +399,10 @@ async function renderBook(id) {
       </div>
     </div>
 
-    <div class="sec-head"><h2>章节</h2><span class="sub">状态由模型用 bookwriter_project action=status 更新</span></div>
+    <div class="sec-head"><h2>章节</h2><span class="sub">点「查看」读正文；状态与正文由模型用 bookwriter_project action=status 更新</span></div>
     ${chapters.length ? `<div class="panel" style="padding:6px 0">
       <table class="chapters">
-        <thead><tr><th style="width:44px">#</th><th>标题</th><th style="width:84px">状态</th><th>摘要</th><th style="width:92px">更新</th></tr></thead>
+        <thead><tr><th style="width:44px">#</th><th>标题</th><th style="width:84px">状态</th><th>摘要</th><th style="width:96px">正文</th><th style="width:92px">更新</th></tr></thead>
         <tbody>${chapters.map((c) => {
           const [tone, label] = STATUS[c.status] || STATUS.todo
           return `<tr>
@@ -328,6 +410,9 @@ async function renderBook(id) {
             <td><b>${esc(c.title)}</b></td>
             <td class="state"><span class="badge ${tone}">${label}</span></td>
             <td class="summary">${esc(c.summary || '—')}</td>
+            <td class="state">${c.hasContent
+              ? `<button class="btn ghost small" data-chapter="${c.index}">查看${c.contentChars ? ` ${c.contentChars} 字` : ''}</button>`
+              : '<span class="card-sub muted" style="font-size:11px">无正文</span>'}</td>
             <td class="when">${esc(shortTime(c.updatedAt))}</td>
           </tr>`
         }).join('')}</tbody>
@@ -340,6 +425,9 @@ async function renderBook(id) {
   `)
 
   bindHistory()
+  app.querySelectorAll('[data-chapter]').forEach((el) => el.addEventListener('click', () => {
+    openChapter(b.id, Number(el.dataset.chapter))
+  }))
   const setCurrent = app.querySelector('#set-current')
   if (setCurrent) setCurrent.addEventListener('click', async () => {
     try {
@@ -353,7 +441,8 @@ async function renderBook(id) {
   if (continueBtn) continueBtn.addEventListener('click', () => start(
     `继续写《${b.project}》（书稿 id=${b.id}，风格 ${styleLabel(b.style)}）。` +
     `先 bookwriter_project action=list 看当前进度${isCurrent ? '' : '；如果当前书不是这本，先 action=current id=' + b.id}；` +
-    `然后按对应风格 skill 的方法论与结构把未完成的章节写成正文，每完成一章用 action=status 记一笔（status=done + 一句话摘要）。`))
+    `然后按对应风格 skill 的方法论与结构把未完成的章节写成正文，每完成一章用 action=status 记一笔：` +
+    `status=done、summary=一句话摘要、content="<本章完整正文 markdown>"（content 一定要带全文，否则工作台点开是空的）。`))
   const copyOutline = app.querySelector('#copy-outline')
   if (copyOutline) copyOutline.addEventListener('click', () => copy(data.outline || ''))
   const removeBtn = app.querySelector('#remove')
@@ -520,10 +609,12 @@ ${f.question ? `这本书要回答：${f.question}\n` : ''}每章约 ${f.words} 
 
 请用 bookwriter 插件推进：
 1. 先 bookwriter_project action=init：project="${f.project}"、style=${f.style}、chapters=${titles.length ? titles.join('|') : '（你先给 6–8 章的标题清单）'}。
-2. 加载 ${f.style} 技能，按它的方法论/结构/质量检查逐章写正文；每章写完用 action=status index=N status=done summary="这一章讲了什么" 记一笔。
+2. 加载 ${f.style} 技能，按它的方法论/结构/质量检查逐章写正文；每章写完立刻用 action=status 记一笔：
+   index=N、status=done、summary="这一章讲了什么"、content="<本章完整正文 markdown>"。
+   content 必须带正文全文（不要只写摘要），否则侧栏工作台点开这一章是空的；正文也可以先写成工作区里的 md 文件，再用 contentPath 指过去。
 3. 每章交付时给我：本章一句话主旨 + 结构（SCQA/三段式等）+ 正文，并说明用了哪几个心法。
 4. 全部写完后用 action=list 汇总进度，告诉我哪章还可以再打磨。
-侧栏「长文写作」工作台里能看到章节进度和每次改动记录。`)
+侧栏「长文写作」工作台里能看到章节进度，并且能逐章点开读正文。`)
   })
   document.getElementById('f-outline').addEventListener('click', () => {
     const f = readForm()

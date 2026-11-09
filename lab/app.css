@@ -459,3 +459,19 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
   .nav-group { display: none; }
   .main { padding: 18px 16px 50px; }
 }
+
+/* ---- 章节正文阅读（viewer 里） ---- */
+.chapter-body { max-width: 76ch; font-size: 14px; line-height: 1.95; color: var(--ink); }
+.chapter-body h1 { font-size: 21px; margin: 22px 0 10px; letter-spacing: 0.3px; }
+.chapter-body h2 { font-size: 18px; margin: 20px 0 8px; }
+.chapter-body h3 { font-size: 15.5px; margin: 18px 0 6px; }
+.chapter-body h4, .chapter-body h5, .chapter-body h6 { font-size: 14px; margin: 14px 0 6px; }
+.chapter-body p { margin: 0 0 12px; }
+.chapter-body ul, .chapter-body ol { margin: 0 0 12px; padding-left: 22px; }
+.chapter-body li { margin: 3px 0; }
+.chapter-body blockquote { margin: 12px 0; padding: 8px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; color: var(--ink-2); }
+.chapter-body hr { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
+.chapter-body code { background: color-mix(in srgb, var(--ink) 8%, transparent); border-radius: 4px; padding: 1px 5px; font-size: 12.5px; }
+.chapter-body pre { background: color-mix(in srgb, var(--ink) 6%, transparent); border-radius: 8px; padding: 12px; overflow: auto; }
+.chapter-body pre code { background: transparent; padding: 0; }
+.chapter-body a { color: var(--accent-ink); }
