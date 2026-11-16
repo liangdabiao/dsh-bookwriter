@@ -74,7 +74,7 @@ npm run build                 # client.js → dist/client.js（宿主加载的�
 ## 安装
 
 ```bash
-dsh plugin --profile web add dsh-bookwriter
+dsh plugin --profile web add https://github.com/liangdabiao/dsh-bookwriter
 ```
 
 本地开发（link 安装）时宿主只认 profile 的 `dsh.profile.bundles`；改了 `lib/`、`src/` 需要重启一次 DeepSeek Harness，
